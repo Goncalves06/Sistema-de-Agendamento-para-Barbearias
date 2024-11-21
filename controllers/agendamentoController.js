@@ -1,40 +1,42 @@
 const { Agendamento } = require('../models/agendamentoModel');
 const { User } = require('../models/userModel');
 const { Slot } = require('../models/slotModel');
+const { Servico } = require('../models/servicoModel');
 const { Desmarque } = require('../models/desmarqueModel');
 
-async function criarAgendamento (req, res) {
+const consultaData = async (data) => {
+    const verificaData = await Slot.findAll({
+        where: {
+            data: data,
+            disponivel: true
+        }
+    });
 
-    const consultaData = async (req, res) => {
-        const { data } = req.body
-    
-        const verificaData = await Slot.findAll({
+    if (verificaData.length === 0) {
+        return { success: false, message: 'Data ainda não disponível para agendamento ou horários esgotados! Selecione uma data mais próxima ou contate seu barbeiro.' };
+    }
+
+    try {
+        const horariosDisponiveis = await Slot.findAll({
             where: {
                 data: data,
                 disponivel: true
             }
         });
+        return { success: true, horariosDisponiveis };
+    } catch (error) {
+        return { success: false, message: 'Não foi possível ver os horários disponíveis! Algo ocorreu', error: error.message };
+    }
+};
+
+async function criarAgendamento(req, res) {
+    const { data, horario_inicio, servico } = req.body;
+
+    const consultaDataResult = await consultaData(data);
     
-        if (!verificaData) {
-            return res.json({message: 'Data ainda não disponivel para agendamento ou horarios esgotados! Selecione uma data mais proxima ou contate seu barbeiro.'});
-        }
-    
-        try{
-            const horariosDisponiveis = await Slot.findAll({
-                where: {
-                    data: data,
-                    disponivel: true
-                }
-            });
-    
-            return res.json({horariosDisponiveis});
-        
-        } catch (error) {
-            return res.json({ message: 'Não foi possivel ver os horarios disponiveis! Algo ocorreu', error: error.message });
-        };
-    };
-    
-    const { horario_inicio, servico } = req.body;
+    if (!consultaDataResult.success) {
+        return res.json({ message: consultaDataResult.message });
+    }
 
     try {
         const slot = await Slot.findOne({
@@ -47,7 +49,7 @@ async function criarAgendamento (req, res) {
 
         if (!slot) {
             return res.json({ message: 'Horario não disponivel!' });
-        };
+        }
 
         const user = await User.findOne({
             where: {
@@ -56,8 +58,18 @@ async function criarAgendamento (req, res) {
         });
 
         if (!user) {
-           return console.log('ID do usuario não encontrado no JWT');
-        };
+           return res.json('ID do usuario não encontrado no JWT');
+        }
+
+        const verfServico = await Servico.findOne({
+            where: {
+                nome: servico
+            }
+        });
+
+        if (!verfServico) {
+            return res.json({ message: 'Serviço não existente!' });
+        }
 
         const novoAgendamento = await Agendamento.create({
             usuario_id: user.id,
@@ -69,17 +81,15 @@ async function criarAgendamento (req, res) {
             servico: servico
         });
 
-        if (novoAgendamento){
+        if (novoAgendamento) {
             await slot.update({ disponivel: false });
-        };
+        }
 
         return res.json({ message: 'Agendamento Criado!' });
 
     } catch (error) {
-
         return res.json({ message: 'Erro ao criar agendamento', error: error.message });
-
-    };
+    }
 };
 
 async function agendamentoUsuario (req, res) {
@@ -161,7 +171,7 @@ async function reqCancelamento (req, res) {
             });
     
             if (!slot) {
-                return res.json({message: 'Erro: ', error: error.message });
+                return res.json({message: 'Erro ao verificar slot!'});
             };
 
             const solicitacao = await Desmarque.create({
@@ -218,12 +228,4 @@ async function reqCancelamento (req, res) {
     };
 };
 
-const respostaCancelamento = async (req, res) => {
-    const { resposta, desmarque_id } = req.body;
-
-
-}
-
 module.exports = { reqCancelamento, agendamentoUsuario, criarAgendamento };
-
-
