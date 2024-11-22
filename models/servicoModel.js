@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/config');
 
-const Servico = sequelize.define('Desmarque', {
+const Servico = sequelize.define('Servico', {
 
     nome: {
         type: DataTypes.STRING,
@@ -11,6 +11,12 @@ const Servico = sequelize.define('Desmarque', {
     preco: {
         type: DataTypes.INTEGER,  
         allowNull: false
+    },
+
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,      
+        primaryKey: true
     }
 
 }, {
@@ -18,4 +24,4 @@ const Servico = sequelize.define('Desmarque', {
     timestamps: false 
 });
 
-module.exports = { Servico };
+module.exports = { Servico }

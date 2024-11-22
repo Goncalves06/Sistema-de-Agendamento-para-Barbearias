@@ -4,42 +4,33 @@ const { Slot } = require('../models/slotModel');
 const { Servico } = require('../models/servicoModel');
 const { Desmarque } = require('../models/desmarqueModel');
 
-const consultaData = async (data) => {
-    const verificaData = await Slot.findAll({
-        where: {
-            data: data,
-            disponivel: true
-        }
-    });
-
-    if (verificaData.length === 0) {
-        return { success: false, message: 'Data ainda não disponível para agendamento ou horários esgotados! Selecione uma data mais próxima ou contate seu barbeiro.' };
-    }
+async function verfData (req, res) {
+    const { data } = req.body;
 
     try {
-        const horariosDisponiveis = await Slot.findAll({
+        const consultaData = await Slot.findAll({
             where: {
                 data: data,
                 disponivel: true
             }
         });
-        return { success: true, horariosDisponiveis };
+    
+        if (consultaData.length === 0) {
+            return res.json({message: 'Não há nenhum horario disponivel na data selecionada!'})
+        };
+    
+        res.json({consultaData});
+    
     } catch (error) {
-        return { success: false, message: 'Não foi possível ver os horários disponíveis! Algo ocorreu', error: error.message };
-    }
+        return res.json({message: 'Ocorreu algum erro: ', error: error.message});
+    };
 };
 
 async function criarAgendamento(req, res) {
     const { data, horario_inicio, servico } = req.body;
 
-    const consultaDataResult = await consultaData(data);
-    
-    if (!consultaDataResult.success) {
-        return res.json({ message: consultaDataResult.message });
-    }
-
     try {
-        const slot = await Slot.findOne({
+        const verfSlot = await Slot.findOne({
             where: {
                 data: data,
                 horario_inicio: horario_inicio,
@@ -47,9 +38,19 @@ async function criarAgendamento(req, res) {
             }
         });
 
-        if (!slot) {
-            return res.json({ message: 'Horario não disponivel!' });
-        }
+        if (!verfSlot) {
+            return res.json({ message: 'Horário inserido não disponível!' });
+        };
+
+        const verfServico = await Servico.findOne({
+            where: {
+                nome: servico,
+            }
+        });
+
+        if (!verfServico) {
+            return res.json({ message: 'Serviço selecionado não existe!' });
+        };
 
         const user = await User.findOne({
             where: {
@@ -58,21 +59,11 @@ async function criarAgendamento(req, res) {
         });
 
         if (!user) {
-           return res.json('ID do usuario não encontrado no JWT');
-        }
-
-        const verfServico = await Servico.findOne({
-            where: {
-                nome: servico
-            }
-        });
-
-        if (!verfServico) {
-            return res.json({ message: 'Serviço não existente!' });
+            return res.json({ message: 'Dados do usuário não encontrados no JWT!' });
         }
 
         const novoAgendamento = await Agendamento.create({
-            usuario_id: user.id,
+            usuario_id: req.user.id,
             usuario_cpf: user.cpf,
             usuario_nome: user.nome,
             usuario_telefone: user.telefone,
@@ -80,15 +71,14 @@ async function criarAgendamento(req, res) {
             horario_inicio: horario_inicio,
             servico: servico
         });
-
+        
         if (novoAgendamento) {
-            await slot.update({ disponivel: false });
-        }
-
-        return res.json({ message: 'Agendamento Criado!' });
+            await verfSlot.update({ disponivel: false });
+            return res.json({ message: 'Agendamento realizado com sucesso!', novoAgendamento });
+        };
 
     } catch (error) {
-        return res.json({ message: 'Erro ao criar agendamento', error: error.message });
+        return res.json({ message: 'Algum erro ocorreu no processo!', error: error.message });
     }
 };
 
@@ -213,7 +203,7 @@ async function reqCancelamento (req, res) {
             const cancelarAgendamento = await agendamento.destroy();
 
             if (cancelarAgendamento) {
-                const registro = await Desmarque.create({
+                await Desmarque.create({
                     id_usuario: agendamento.usuario_id,
                     id_agendamento: agendamentoID,
                     aceito: true,
@@ -221,11 +211,12 @@ async function reqCancelamento (req, res) {
                 });
 
                 await slot.update({disponivel: true});
+                return ({message: 'Cancelamento feito com sucesso', Desmarque});
             };
         } catch (error) {
-            res.json({message: 'Algo deu errado', error: error.message });
+            return res.json({message: 'Algo deu errado', error: error.message });
         };
     };
 };
 
-module.exports = { reqCancelamento, agendamentoUsuario, criarAgendamento };
+module.exports = { reqCancelamento, agendamentoUsuario, criarAgendamento, verfData };

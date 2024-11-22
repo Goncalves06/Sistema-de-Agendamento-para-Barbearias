@@ -40,10 +40,10 @@ const Agendamento = sequelize.define('Agendamento', {
         allowNull: false
     },
 
-    horario_fim: {
-        type: DataTypes.STRING,  //HORARIO DE FIM DO AGENDAMENTO
+    servico: {
+        type: DataTypes.STRING, //HORARIO DE INICIO DO AGENDAMENTO
         allowNull: false
-    },
+    }
 }, {
     tableName: 'AGENDAMENTO',  //CONFIRMA O NOME DA TABELA ONDE OS DADOS SERÃO GRAVADOS NO BANCO
     timestamps: false

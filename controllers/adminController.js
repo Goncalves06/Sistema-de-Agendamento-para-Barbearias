@@ -1,15 +1,10 @@
 const { Agendamento } = require('../models/agendamentoModel');
+const { Desmarque } = require('../models/desmarqueModel');
 const { User } = require('../models/userModel');
 const { Slot } = require('../models/slotModel');
-const { Servico } = require('../models/servicoModel');
-const { Desmarque } = require('../models/desmarqueModel');
 
 const respostaCancelamento = async (req, res) => {
     const { resposta, desmarque_id } = req.body;
-
-    if (!Number.isInteger(desmarque_id)) {
-        return res.json({ message: 'O ID da solicitação deve ser um número inteiro válido.' });
-    };
 
     try {
         const solicitacao = await Desmarque.findOne({
@@ -30,20 +25,45 @@ const respostaCancelamento = async (req, res) => {
 
         if (!agendamentoSolic) {
             return res.json({ message: 'Agendamento referente ao ID da solicitação não emcontrado!'});
-        }
-
-        if (resposta === true) {
-        
-            await solicitacao.update({aceito: true, por_adminID: req.user.id});
-            await agendamentoSolic.destroy();
-            return res.json({message: 'Solicitação aceita e operada!'});
-    
-        } else {
-            await solicitacao.update({aceito: false, por_adminID: req.user.id});
-            return res.json({message: 'Solicitação recusada e atualizada!'});
         };
-    
+
+        const slotAgendamento = await Slot.findOne({
+            where: {
+                data: agendamentoSolic.data,
+                horario_inicio: agendamentoSolic.horario_inicio,
+                disponivel: false
+            }
+        });
+
+        if (!slotAgendamento) {
+            return res.json({message: 'Horario do agendamento não encontrado"'});
+        };
+
+        const user = await User.findOne({
+            where: {
+                id: req.user.id
+            }
+        });
+
+        try {
+            if (resposta === true) {
+                await solicitacao.update({aceito: true, por_adminID: user.id });
+                await agendamentoSolic.destroy();
+                await slotAgendamento.update({disponivel: true});
+                return res.json({message: 'Solicitação aceita e operada!'});
+        
+            } else {
+                await solicitacao.update({aceito: false, por_adminID: user.id });
+                return res.json({message: 'Solicitação recusada e atualizada!'});
+            };
+        
+        } catch (error) {
+            return res.json({message: 'Erro no processo de atualização do desmarque', error: error.message});
+        };
+        
     } catch (error) {
         return res.json({message: 'Não foi possivel concluir a solicitação', error: error.message });
     };
 };
+
+module.exports = { respostaCancelamento };

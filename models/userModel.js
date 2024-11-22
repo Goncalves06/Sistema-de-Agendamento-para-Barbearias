@@ -29,7 +29,8 @@ const User = sequelize.define('User', {
 
     admin: {
         type: DataTypes.BOOLEAN,  //É USUARIO ADMINISTRADOR
-        allowNull: false
+        allowNull: false,
+        defaultValue: 0
     },
 
     senha: {
