@@ -22,6 +22,11 @@ const Desmarque = sequelize.define('Desmarque', {
     aceito: {
         type: DataTypes.BOOLEAN,  
         allowNull: false
+    },
+
+    por_adminID: {
+        type: DataTypes.INTEGER,  
+        allowNull: true
     }
 }, {
     tableName: 'DESMARQUE',  
