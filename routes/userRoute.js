@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { loginUser } = require('../controllers/authController');
 const { userRegister, deleteUser } = require('../controllers/userController');
-const { agendamentoUsuario  } = require('../controllers/agendamentoController');
+const { agendamentoUsuario } = require('../controllers/agendamentoController');
 const { verificarToken } = require('../middlewares/tokenVerify');
 
 //ROTAS DE USUARIO

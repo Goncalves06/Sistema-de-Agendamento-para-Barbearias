@@ -97,15 +97,7 @@ async function agendamentoUsuario (req, res) {
         const agendamentos = await Agendamento.findAll({
             where: {
                 usuario_id: user.id
-            },
-            attributes: ['id', 'horario_inicio', 'horario_fim'],
-            include: [
-                {
-                    model: Service,
-                    attributes: ['nome']
-                }
-            ]
-        });
+            }});
 
         if (agendamentos.length === 0) {
             return res.json({ message: 'Você não tem agendamentos!' });
