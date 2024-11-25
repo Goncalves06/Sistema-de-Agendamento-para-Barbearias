@@ -17,6 +17,11 @@ const Servico = sequelize.define('Servico', {
         type: DataTypes.INTEGER,
         autoIncrement: true,      
         primaryKey: true
+    },
+
+    ativo: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false
     }
 
 }, {

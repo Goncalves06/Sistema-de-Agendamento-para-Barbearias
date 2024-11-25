@@ -2,6 +2,7 @@ const { Agendamento } = require('../models/agendamentoModel');
 const { Desmarque } = require('../models/desmarqueModel');
 const { User } = require('../models/userModel');
 const { Slot } = require('../models/slotModel');
+const { Servico } = require('../models/servicoModel');
 
 async function addDia (req, res) {
     try {
@@ -79,8 +80,34 @@ async function delDia (req, res) {
       return res.json({ message: 'Algo ocorreu ao processar a requisição!', error: error.message });
     };
   };
-  
 
+const bloqHorario = async (req, res) => {
+    const { data, horario_inicio } = req.body;
+
+    try {
+        const slot = await Slot.findOne({
+            where: {
+                data: data,
+                horario_inicio: horario_inicio,
+                disponivel: true
+            }
+        });
+
+        if (!slot) {
+            return res.json({message: 'Não foi possivel encontrar o horario! Horario marcado ou não existente no sistema!'})
+        };
+
+        await slot.update({
+            disponivel: false
+        });
+
+        return res.json({message: 'Horario atualizado para indisponivel!'});
+    
+    } catch (error) {
+        return res.json({ message: 'Algo ocorreu ao processar a requisição!', error: error.message });
+    };
+};
+  
 const respostaCancelamento = async (req, res) => {
     const { resposta, desmarque_id } = req.body;
 
@@ -144,4 +171,130 @@ const respostaCancelamento = async (req, res) => {
     };
 };
 
-module.exports = { respostaCancelamento, delDia, addDia };
+const novoServico = async (req, res) => {
+    const { nome, preco } = req.body;
+    
+    try {
+        const isAdmin = req.user.admin;
+        
+        if (isAdmin == false) {
+            return res.json({message: 'Você não tem permissão para cadastrar novos serviços!'});
+        };
+        
+        if (nome.length < 3) {
+            return res.json({message: 'Coloque um nome valido para o novo serviço!'});
+        };
+        
+        const servico = await Servico.create({
+            nome: nome,
+            preco: preco,
+            ativo: true
+        });
+
+        if (!servico) {
+            return res.json({message: 'Não foi possivel cadastrar o novo serviço!'});
+        };
+
+        return res.json({message: 'Novo serviço cadastrado!', servico});
+    
+    } catch (error) {
+        return res.json({message: 'Erro! Algo ocorreu', error: error.message});
+    }
+};
+
+const mostrarServicos = async (res) => {
+    const servicos = await Servico.findAll;
+
+    if (servicos.length < 1) {
+        return res.json({message: 'Não ha agendamentos cadastrados!'})
+    };
+
+    return res.json({servicos});
+};
+
+const suspenderServico = async (req, res) => {
+    const { id } = req.body;
+
+    try {
+        const isAdmin = req.user.admin;
+        
+        if (isAdmin == false) {
+            return res.json({message: 'Você não tem permissão para cadastrar novos serviços!'});
+        };
+
+        const servico = await Servico.findOne({
+            where: {
+                id: id,
+                ativo: true
+            }
+        });
+
+        if (!servico) {
+            return res.json({message: 'Serviço não existe, ou já não ativo!'})
+        };
+
+        await servico.update({ativo: false});
+    
+    } catch (error) {
+        return res.json({message: 'Erro! Algo ocorreu', error: error.message});
+    }
+};
+
+const ativarServico = async (req, res) => {
+    const { id } = req.body;
+
+    try {
+        const isAdmin = req.user.admin;
+        
+        if (isAdmin == false) {
+            return res.json({message: 'Você não tem permissão para cadastrar novos serviços!'});
+        };
+        
+        const servico = await Servico.findOne({
+            where: {
+                id: id,
+                ativo: false
+            }
+        });
+
+        if (!servico) {
+            return res.json({message: 'Serviço não existe, ou já não ativo!'})
+        };
+
+        await servico.update({ativo: true});
+    
+    } catch (error) {
+        return res.json({message: 'Erro! Algo ocorreu', error: error.message});
+    }
+};
+
+const deleteServico = async (req, res) => {
+    const { id } = req.body;
+
+    try{
+        const isAdmin = req.user.admin;
+        
+        if (isAdmin == false) {
+            return res.json({message: 'Você não tem permissão para cadastrar novos serviços!'});
+        };
+        
+        const servico = await Servico.findOne({
+            where: {
+                id: id
+            }
+        });
+
+        if (!servico) {
+            return res.json({message: 'Não foi possivel encontrar o servico pelo ID!'});
+        };
+
+        await servico.destroy();
+
+        return res.json({message: 'Servico excluido com sucesso!'});
+    
+    } catch (error) {
+        return res.json({message: 'Erro! Algo ocorreu', error: error.message});
+    }
+}
+
+module.exports = { respostaCancelamento, delDia, addDia, novoServico, mostrarServicos, suspenderServico, ativarServico, deleteServico, bloqHorario };
